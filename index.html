@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Realm of Eternal Conquest</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            background-color: #0a0a1a;
+            color: #fff;
+            touch-action: none;
+        }
+        
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #health-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #health-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff9900);
+            transition: width 0.3s;
+        }
+        
+        #mana-bar {
+            position: absolute;
+            bottom: 50px;
+            left: 20px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #mana-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #0066ff, #00ccff);
+            transition: width 0.3s;
+        }
+        
+        #mini-map {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 2px solid #00ccff;
+        }
+        
+        #weapon-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        #quest-notification {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+            pointer-events: auto;
+            display: none;
+        }
+        
+        #menu-button {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid #00ccff;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 20, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        
+        .menu-screen {
+            background: linear-gradient(145deg, #0a0a2a, #1a1a4a);
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid #00ccff;
+            box-shadow: 0 0 30px rgba(0, 204, 255, 0.5);
+            max-width: 500px;
+            width: 90%;
+            display: none;
+        }
+        
+        #main-menu-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .menu-title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00ccff;
+            text-shadow: 0 0 10px rgba(0, 204, 255, 0.7);
+        }
+        
+        .menu-button {
+            background: linear-gradient(90deg, #0066ff, #00ccff);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .menu-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 204, 255, 0.7);
+        }
+        
+        .settings-group {
+            margin: 15px 0;
+        }
+        
+        .settings-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00ccff;
+        }
+        
+        .settings-slider {
+            width: 100%;
+            height: 10px;
+        }
+        
+        .character-preview {
+            width: 100%;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            margin: 15px 0;
+            border-radius: 10px;
+        }
+        
+        .skin-selector {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+        }
+        
+        .skin-option {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .skin-option.selected {
+            border: 2px solid #00ccff;
+            box-shadow: 0 0 10px rgba(0, 204, 255, 0.7);
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .control-button {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            pointer-events: auto;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #move-joystick {
+            left: 40px;
+            bottom: 40px;
+        }
+        
+        #look-joystick {
+            right: 40px;
+            bottom: 40px;
+        }
+        
+        #action-button {
+            right: 40px;
+            bottom: 120px;
+        }
+        
+        #jump-button {
+            right: 120px;
+            bottom: 40px;
+        }
+        
+        @media (min-width: 768px) {
+            .control-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    
+    <div id="ui-overlay">
+        <div id="health-bar"><div id="health-fill" style="width: 100%"></div></div>
+        <div id="mana-bar"><div id="mana-fill" style="width: 100%"></div></div>
+        <div id="mini-map"></div>
+        <div id="weapon-info">Espada Inicial [Lv. 1]</div>
+        <div id="quest-notification">
+            <h3>Missão: Derrote o Boss Inicial</h3>
+            <p>Encontre e derrote o Guardião da Floresta para obter sua primeira recompensa.</p>
+        </div>
+        <button id="menu-button">Menu</button>
+        
+        <div class="control-button" id="move-joystick">↔</div>
+        <div class="control-button" id="look-joystick">👀</div>
+        <div class="control-button" id="action-button">⚡</div>
+        <div class="control-button" id="jump-button">↑</div>
+    </div>
+    
+    <div id="main-menu">
+        <div id="main-menu-screen" class="menu-screen">
+            <h1 class="menu-title">Realm of Eternal Conquest</h1>
+            <button class="menu-button" onclick="startGame()">Jogar</button>
+            <button class="menu-button" onclick="showMenuScreen('character-menu')">Personalizar Personagem</button>
+            <button class="menu-button" onclick="showMenuScreen('settings-menu')">Configurações</button>
+            <button class="menu-button" onclick="showMenuScreen('loadout-menu')">Armas e Habilidades</button>
+        </div>
+        
+        <div id="character-menu" class="menu-screen">
+            <button class="close-button" onclick="showMenuScreen('main-menu-screen')">×</button>
+            <h2 class="menu-title">Personalização de Personagem</h2>
+            <div class="character-preview"></div>
+            <div class="skin-selector">
+                <div class="skin-option selected">1</div>
+                <div class="skin-option">2</div>
+                <div class="skin-option">3</div>
+                <div class="skin-option">4</div>
+                <div class="skin-option">5</div>
+            </div>
+            <button class="menu-button">Aplicar</button>
+        </div>
+        
+        <div id="settings-menu" class="menu-screen">
+            <button class="close-button" onclick="showMenuScreen('main-menu-screen')">×</button>
+            <h2 class="menu-title">Configurações</h2>
+            
+            <div class="settings-group">
+                <label class="settings-label">Sensibilidade do Mouse/Controle</label>
+                <input type="range" class="settings-slider" id="sensitivity" min="0.1" max="2" step="0.1" value="1">
+            </div>
+            
+            <div class="settings-group">
+                <label class="settings-label">Qualidade Gráfica</label>
+                <input type="range" class="settings-slider" id="graphics-quality" min="0" max="2" step="1" value="1">
+            </div>
+            
+            <div class="settings-group">
+                <label class="settings-label">Volume Geral</label>
+                <input type="range" class="settings-slider" id="master-volume" min="0" max="100" step="1" value="80">
+            </div>
+            
+            <div class="settings-group">
+                <label class="settings-label">Volume de Efeitos</label>
+                <input type="range" class="settings-slider" id="sfx-volume" min="0" max="100" step="1" value="90">
+            </div>
+            
+            <button class="menu-button">Aplicar Configurações</button>
+        </div>
+        
+        <div id="loadout-menu" class="menu-screen">
+            <button class="close-button" onclick="showMenuScreen('main-menu-screen')">×</button>
+            <h2 class="menu-title">Armas e Habilidades</h2>
+            <p>Espada Inicial - Nível 1</p>
+            <p>Progressão: 0/10 para próximo nível</p>
+            <p>Habilidades desbloqueadas: 0</p>
+            <button class="menu-button">Melhorar Arma</button>
+            <button class="menu-button">Gerenciar Habilidades</button>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais do jogo
+        let scene, camera, renderer, controls;
+        let player, enemies = [], chests = [], weapons = [];
+        let health = 100, mana = 100, playerLevel = 1;
+        let currentWeapon = null;
+        let gameStarted = false;
+        
+        // Inicialização do jogo
+        function init() {
+            // Configurar cena, câmera e renderizador
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2a);
+            scene.fog = new THREE.Fog(0x1a1a2a, 10, 50);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+            
+            // Adicionar controles para movimento em desktop
+            if (!isMobile()) {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+            }
+            
+            // Adicionar iluminação
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Criar terreno básico
+            createTerrain();
+            
+            // Criar jogador
+            createPlayer();
+            
+            // Adicionar alguns objetos no mundo
+            createEnvironment();
+            
+            // Configurar eventos de redimensionamento
+            window.addEventListener('resize', onWindowResize);
+            
+            // Configurar controles de teclado/mouse
+            setupControls();
+            
+            // Iniciar loop de animação
+            animate();
+            
+            // Mostrar notificação de missão inicial
+            document.getElementById('quest-notification').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('quest-notification').style.display = 'none';
+            }, 5000);
+        }
+        
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        
+        function createTerrain() {
+            // Criar um terreno simples
+            const groundGeometry = new THREE.PlaneGeometry(100, 100, 10, 10);
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2a4a2a,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // Adicionar algumas colinas e montanhas
+            for (let i = 0; i < 20; i++) {
+                const hillGeometry = new THREE.ConeGeometry(Math.random() * 3 + 1, Math.random() * 5 + 2, 8);
+                const hillMaterial = new THREE.MeshStandardMaterial({ 
+                    color: new THREE.Color(0.2, 0.3 + Math.random() * 0.2, 0.2),
+                    roughness: 0.9
+                });
+                const hill = new THREE.Mesh(hillGeometry, hillMaterial);
+                hill.position.set(
+                    Math.random() * 80 - 40,
+                    Math.random() * 2,
+                    Math.random() * 80 - 40
+                );
+                hill.castShadow = true;
+                hill.receiveShadow = true;
+                scene.add(hill);
+            }
+            
+            // Adicionar algumas árvores
+            for (let i = 0; i < 30; i++) {
+                const treeTrunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.3, 0.5, 2, 8),
+                    new THREE.MeshStandardMaterial({ color: 0x5d4037 })
+                );
+                treeTrunk.position.set(
+                    Math.random() * 80 - 40,
+                    1,
+                    Math.random() * 80 - 40
+                );
+                treeTrunk.castShadow = true;
+                treeTrunk.receiveShadow = true;
+                
+                const treeCrown = new THREE.Mesh(
+                    new THREE.SphereGeometry(1.5, 8, 6),
+                    new THREE.MeshStandardMaterial({ color: 0x2e7d32 })
+                );
+                treeCrown.position.y = 2.5;
+                treeCrown.castShadow = true;
+                
+                const tree = new THREE.Group();
+                tree.add(treeTrunk);
+                tree.add(treeCrown);
+                scene.add(tree);
+            }
+        }
+        
+        function createPlayer() {
+            // Criar um jogador simples (cubo por enquanto)
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const material = new THREE.MeshStandardMaterial({ color: 0x00aaff });
+            player = new THREE.Mesh(geometry, material);
+            player.position.set(0, 1, 0);
+            player.castShadow = true;
+            scene.add(player);
+            
+            // Adicionar uma espada inicial
+            const swordGeometry = new THREE.BoxGeometry(0.2, 1.5, 0.2);
+            const swordMaterial = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+            const sword = new THREE.Mesh(swordGeometry, swordMaterial);
+            sword.position.set(0.5, -0.5, 0);
+            player.add(sword);
+            
+            currentWeapon = {
+                name: "Espada Inicial",
+                level: 1,
+                damage: 10,
+                element: "Físico",
+                mesh: sword
+            };
+        }
+        
+        function createEnvironment() {
+            // Adicionar alguns baús
+            for (let i = 0; i < 5; i++) {
+                const chestGeometry = new THREE.BoxGeometry(1, 0.8, 1);
+                const chestMaterial = new THREE.MeshStandardMaterial({ color: 0xd4af37 });
+                const chest = new THREE.Mesh(chestGeometry, chestMaterial);
+                chest.position.set(
+                    Math.random() * 60 - 30,
+                    0.4,
+                    Math.random() * 60 - 30
+                );
+                chest.castShadow = true;
+                chest.receiveShadow = true;
+                scene.add(chest);
+                chests.push(chest);
+            }
+            
+            // Adicionar alguns inimigos iniciais
+            for (let i = 0; i < 3; i++) {
+                const enemyGeometry = new THREE.SphereGeometry(0.8, 16, 12);
+                const enemyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                const enemy = new THREE.Mesh(enemyGeometry, enemyMaterial);
+                enemy.position.set(
+                    Math.random() * 40 - 20,
+                    0.8,
+                    Math.random() * 40 - 20
+                );
+                enemy.castShadow = true;
+                scene.add(enemy);
+                enemies.push({
+                    mesh: enemy,
+                    health: 30,
+                    damage: 5,
+                    type: "minion"
+                });
+            }
+            
+            // Adicionar boss inicial
+            const bossGeometry = new THREE.ConeGeometry(2, 4, 16);
+            const bossMaterial = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
+            const boss = new THREE.Mesh(bossGeometry, bossMaterial);
+            boss.position.set(20, 2, 20);
+            boss.castShadow = true;
+            scene.add(boss);
+            enemies.push({
+                mesh: boss,
+                health: 100,
+                damage: 15,
+                type: "boss"
+            });
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function setupControls() {
+            // Configurar controles de teclado
+            document.addEventListener('keydown', (event) => {
+                if (!gameStarted) return;
+                
+                switch(event.key) {
+                    case 'w':
+                    case 'ArrowUp':
+                        player.position.z -= 0.5;
+                        break;
+        
